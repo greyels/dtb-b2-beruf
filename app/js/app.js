@@ -93,6 +93,36 @@
   const BLOCK_OF = Object.fromEntries(BLOCKS.flatMap((b) => b.parts.map((p) => [p[0], b])));
   const LETTERS = "abcdefghij".split("");
 
+  /**
+   * Official DTB B2 points per part: [label, Fertigkeit, calculation, max points].
+   * Source: telc Übungstest 1 Deutsch-Test für den Beruf B2 (2020), "Punkte und Gewichtung".
+   */
+  const POINTS = {
+    lesen1: [["Aufgaben 1-5", "Lesen", "5 × 3", 15]],
+    lesen2: [["Aufgaben 6-9", "Lesen", "4 × 3", 12]],
+    lesen3: [["Aufgaben 10-13", "Lesen", "4 × 3", 12]],
+    lesen4: [["Aufgaben 14-18", "Lesen", "5 × 3", 15]],
+    ls: [["Aufgaben 19-20", "Lesen", "2 × 3", 6], ["Aufgabe 21 (E-Mail)", "Schreiben", "Kriterium I", 7]],
+    hoeren1: [["Aufgaben 22-27", "Hören", "6 × 3", 18]],
+    hoeren2: [["Aufgaben 28-31", "Hören", "4 × 3", 12]],
+    hoeren3: [["Aufgaben 32-35", "Hören", "4 × 3", 12]],
+    hoeren4: [["Aufgaben 36-40", "Hören", "5 × 3", 15]],
+    hs: [["Aufgabe 41", "Hören", "1 × 3", 3], ["Aufgaben 42-45 (Notiz)", "Schreiben", "42 und 43: je 0,5 · 44: 4 · 45: 1", 6]],
+    sb1: [["Aufgaben 46-51", "Schreiben", "6 × 0,5", 3]],
+    sb2: [["Aufgaben 52-57", "Schreiben", "6 × 0,5", 3]],
+    schreiben: [["Aufgabe 58 (Forumsbeitrag)", "Schreiben", "Kriterium I", 14]],
+    sp1: [["Teil 1A: Über ein Thema sprechen", "Sprechen", "Kriterium I", 5], ["Teil 1B: Prüferfragen", "Sprechen", "Kriterium I", 5], ["Teil 1C: Erläuterung eines Aspekts", "Sprechen", "Kriterium I", 2]],
+    sp2: [["Teil 2: Mit Kolleginnen und Kollegen sprechen", "Sprechen", "Kriterium I", 8]],
+    sp3: [["Teil 3: Lösungswege diskutieren", "Sprechen", "Kriterium I", 10]],
+  };
+  const CRITERIA_NOTE = {
+    Schreiben: "Dazu kommen für den ganzen Subtest Schreiben 27 Punkte für die Texte 21 und 58: Kriterium II Kommunikative Gestaltung, III Formale Richtigkeit, IV Spektrum sprachlicher Mittel (je 9 Punkte).",
+    Sprechen: "Dazu kommen für den ganzen Subtest Sprechen 30 Punkte: Kriterium II Aussprache/Intonation, III Formale Richtigkeit, IV Spektrum sprachlicher Mittel (je 10 Punkte).",
+  };
+  const ITEM_POINTS = (nr) => (nr <= 41 ? 3 : 0.5);
+  const NOTE_POINTS = { 42: 0.5, 43: 0.5, 44: 4, 45: 1 };
+  const fmtPts = (n) => String(Math.round(n * 10) / 10).replace(".", ",");
+
   /** Closed items of a part: { nr, answer, explain } (answer: letter, "x" or boolean). */
   function partItems(t, pid) {
     const fromTasks = (tasks) => tasks.map((x) => ({ nr: x.nr, answer: x.answer, explain: x.explain }));
@@ -695,6 +725,50 @@
     return { right, total, answered };
   }
 
+  /** Official points of the automatically scored tasks of a part. */
+  function partPoints(t, pid) {
+    const st = testState(t.id);
+    let got = 0, max = 0;
+    for (const it of partItems(t, pid)) {
+      max += ITEM_POINTS(it.nr);
+      if (isRight(it, st.answers[it.nr])) got += ITEM_POINTS(it.nr);
+    }
+    if (pid === "hs") {
+      const g = gradeNotes(t.hoerenSchreiben, st.notes);
+      for (const [nr, pts] of Object.entries(NOTE_POINTS)) { max += pts; if (g[nr]) got += pts; }
+    }
+    return { got, max };
+  }
+
+  /** Official points per Fertigkeit for the automatically scored tasks. */
+  function skillPoints(t) {
+    const st = testState(t.id);
+    const sum = { Lesen: 0, Hören: 0, Schreiben: 0 };
+    for (const pid of PART_ORDER) {
+      for (const it of partItems(t, pid)) {
+        if (!isRight(it, st.answers[it.nr])) continue;
+        const skill = it.nr <= 20 ? "Lesen" : it.nr <= 41 ? "Hören" : "Schreiben";
+        sum[skill] += ITEM_POINTS(it.nr);
+      }
+    }
+    const g = gradeNotes(t.hoerenSchreiben, st.notes);
+    for (const [nr, pts] of Object.entries(NOTE_POINTS)) if (g[nr]) sum.Schreiben += pts;
+    return sum;
+  }
+
+  function pointsBox(pid) {
+    const rows = POINTS[pid];
+    if (!rows) return null;
+    const total = rows.reduce((n, r) => n + r[3], 0);
+    const skills = [...new Set(rows.map((r) => r[1]))];
+    return el("details", { class: "points" },
+      el("summary", null, `Punkte in der Prüfung: ${fmtPts(total)}`),
+      el("table", null, el("tbody", null, rows.map(([label, skill, calc, pts]) => el("tr", null,
+        el("td", null, label), el("td", null, skill), el("td", { class: "note" }, calc), el("td", { class: "num" }, `${fmtPts(pts)} P.`))))),
+      skills.filter((k) => CRITERIA_NOTE[k]).map((k) => el("p", { class: "note" }, CRITERIA_NOTE[k])),
+      el("p", { class: "note" }, "Jede Fertigkeit (Lesen, Hören, Schreiben, Sprechen) zählt 60 Punkte, insgesamt 240."));
+  }
+
   function revealedFor(t, pid) {
     const st = testState(t.id);
     return !!st.finished || (mode() === "practice" && !!st.checked[pid]);
@@ -785,7 +859,9 @@
     }
     if (ctx.revealed && closed) {
       const s = partScore(t, pid);
-      bar.append(el("span", { class: `scoreline ${s.right / s.total >= 0.6 ? "good" : "bad"}` }, `${s.right} von ${s.total} richtig`));
+      const pp = partPoints(t, pid);
+      bar.append(el("span", { class: `scoreline ${s.right / s.total >= 0.6 ? "good" : "bad"}` },
+        `${s.right} von ${s.total} richtig · ${fmtPts(pp.got)} von ${fmtPts(pp.max)} Punkten`));
     }
     if (ctx.revealed && !st.finished && checkable) {
       bar.append(el("button", { class: "btn", type: "button", on: { click: () => resetPart(t, pid) } }, "Nochmal versuchen"));
@@ -831,7 +907,7 @@
     const head = el("div", { class: "part-head" },
       el("h1", null, PART_TITLE[pid]),
       el("span", { class: "tag" }, `${block.title}${block.minutes ? ` · ${block.minutes} Minuten` : ""} · ${ctx.exam ? "Prüfungsmodus" : "Übungsmodus"}`));
-    const body = el("div", null, head, ...RENDER[pid](ctx).flat(), ...partFooter(ctx));
+    const body = el("div", null, head, pointsBox(pid), ...RENDER[pid](ctx).flat(), ...partFooter(ctx));
     app.replaceChildren(el("div", { class: "test-layout" }, sideNav(t, pid), el("div", null, mobileNav(t, pid), body)));
     startBlockTimer(ctx);
   }
@@ -866,32 +942,42 @@
       return;
     }
 
-    const rows = [];
-    let sumRight = 0, sumTotal = 0;
-    for (const b of BLOCKS) {
-      if (b.id === "sprechen") continue;
-      let right = 0, total = 0;
-      for (const [pid] of b.parts) {
-        const s = partScore(t, pid);
-        right += s.right; total += s.total;
-      }
-      sumRight += right; sumTotal += total;
-      rows.push(el("tr", null, el("td", null, b.title),
-        el("td", { class: "num" }, total ? `${right} / ${total}` : "–"),
-        el("td", { class: "num" }, total ? `${Math.round((right / total) * 100)} %` : ""),
-        el("td")));
-    }
-    rows.push(el("tr", { class: "total" }, el("td", null, "Geschlossene Aufgaben gesamt"),
-      el("td", { class: "num" }, sumTotal ? `${sumRight} / ${sumTotal}` : "–"),
-      el("td", { class: "num" }, sumTotal ? `${Math.round((sumRight / sumTotal) * 100)} %` : ""), el("td")));
+    const sp = skillPoints(t);
+    const status = (pts) => (pts >= 36 ? ["60 % erreicht", "good"] : pts >= 24 ? ["40-60 %: nur in einer Fertigkeit ausgleichbar", "bad"] : ["unter 40 %", "bad"]);
+    const skillRow = (name, pts) => {
+      const [txt, cls] = status(pts);
+      return el("tr", null, el("td", null, name), el("td", { class: "num" }, `${fmtPts(pts)} / 60`),
+        el("td", { class: "num" }, `${Math.round((pts / 60) * 100)} %`), el("td", { class: `scoreline ${cls}` }, txt));
+    };
+    const overview = PART_ORDER.flatMap((pid) => POINTS[pid].map(([label, skill, calc, pts]) => el("tr", null,
+      el("td", null, label), el("td", null, skill), el("td", { class: "note" }, calc), el("td", { class: "num" }, fmtPts(pts)))));
 
     layout(
       el("h1", null, `Ergebnis: ${t.title}`),
       el("p", null, "Öffnen Sie die einzelnen Teile links, um Ihre Antworten mit Lösungen und Erklärungen zu sehen."),
-      el("p", { class: "note" }, "Orientierung für das Training. Die offizielle DTB-Bewertung gewichtet die Teile anders. Als grobe Regel gilt: ab ca. 60 % in jedem Teil sind Sie auf gutem Weg zu B2."),
-      el("h3", null, "Geschlossene Aufgaben (automatisch geprüft)"),
-      el("table", { class: "results" }, el("thead", null, el("tr", null, el("th", null, "Teil"), el("th", null, "Punkte"), el("th", null, "%"), el("th", null, ""))), el("tbody", null, rows)),
-      el("p", { class: "note", style: "margin-top:14px" }, "Schreiben und Sprechen werden nicht automatisch bewertet. Vergleichen Sie Ihre Texte mit den Musterlösungen und Checklisten."),
+      el("h3", null, "Punkte nach Fertigkeit"),
+      el("table", { class: "results" },
+        el("thead", null, el("tr", null, el("th", null, "Fertigkeit"), el("th", null, "Punkte"), el("th", null, "%"), el("th", null, ""))),
+        el("tbody", null,
+          skillRow("Lesen (Aufgaben 1-20)", sp.Lesen),
+          skillRow("Hören (Aufgaben 22-41)", sp.Hören),
+          el("tr", null, el("td", null, "Schreiben"), el("td", { class: "num" }, `${fmtPts(sp.Schreiben)} / 12`),
+            el("td", { class: "num" }, ""), el("td", { class: "note" }, "automatisch nur Sprachbausteine (6) und Telefonnotiz (6). Die Texte 21 und 58 (48 Punkte) bewerten Prüfende.")),
+          el("tr", null, el("td", null, "Sprechen"), el("td", { class: "num" }, "– / 60"), el("td"),
+            el("td", { class: "note" }, "wird in der Prüfung von Prüfenden bewertet")))),
+      el("div", { class: "panel muted", style: "margin-top:16px" },
+        el("h3", null, "So besteht man die Prüfung"),
+        el("ul", { class: "checklist" },
+          el("li", null, "Insgesamt mindestens 60 % der 240 Punkte, also 144 Punkte."),
+          el("li", null, "Mindestens drei der vier Fertigkeiten mit 60 % oder mehr (mindestens 36 von 60 Punkten)."),
+          el("li", null, "Eine schwächere Fertigkeit kann ausgeglichen werden, wenn sie zwischen 40 % und 60 % liegt (24 bis 36 Punkte).")),
+        el("p", { class: "note", style: "margin:0" }, "Quelle: telc, Übungstest 1 Deutsch-Test für den Beruf B2 (2020), Punkte und Gewichtung. Die Punkte hier sind eine Orientierung für das Training.")),
+      el("details", null, el("summary", null, "Alle Teile mit Punkten"),
+        el("table", { class: "results" },
+          el("thead", null, el("tr", null, el("th", null, "Teil"), el("th", null, "Fertigkeit"), el("th", null, "Berechnung"), el("th", null, "Punkte"))),
+          el("tbody", null, overview)),
+        el("p", { class: "note" }, CRITERIA_NOTE.Schreiben),
+        el("p", { class: "note" }, CRITERIA_NOTE.Sprechen)),
       el("div", { class: "actions", style: "margin-top:22px" },
         el("button", { class: "btn btn-danger", type: "button", on: { click: () => { if (confirm(`Alle Antworten von ${t.title} löschen?`)) { delete store.tests[t.id]; save(true); renderRoute(); } } } }, "Test neu starten (alle Antworten löschen)")));
   }

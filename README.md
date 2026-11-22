@@ -29,6 +29,11 @@ Local: open `app/index.html` in Chrome or Edge (double-click is enough, no serve
 In both modes, "Test beenden" after the last part locks all answers and shows scores,
 explanations, transcripts and model answers for the whole test.
 
+Points follow the official DTB B2 scoring (telc Übungstest 1, 2020, "Punkte und Gewichtung"):
+each skill (Lesen, Hören, Schreiben, Sprechen) counts 60 points, 240 in total. Every part shows
+its points, and the results page shows points per skill and the pass rule (144 points, at
+least three skills with 60 % or more). Only closed tasks are scored automatically.
+
 ## Schreiben and Sprechen
 
 These parts are not scored automatically. The learner compares the own text with the
