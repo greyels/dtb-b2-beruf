@@ -1,0 +1,4 @@
+# copyrighted source material, never publish
+*.pdf
+node_modules/
+.DS_Store

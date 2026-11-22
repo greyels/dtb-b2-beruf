@@ -1,0 +1,14 @@
+{
+  "name": "dtb-b2-beruf-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node validate.mjs",
+    "build:sdk": "esbuild sdk-entry.js --bundle --format=iife --global-name=AnthropicSDK --platform=browser --target=es2020 --minify --outfile=../app/vendor/anthropic-sdk.js"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
+    "esbuild": "0.25.0",
+    "jsdom": "^25.0.1"
+  }
+}

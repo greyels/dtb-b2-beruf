@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DTB B2 Beruf Training</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/">DTB B2 Beruf <span>Training</span></a>
+    <div class="topbar-mid" id="topbar-mid"></div>
+    <div class="topbar-right">
+      <span class="timer" id="timer" hidden></span>
+      <button class="icon-btn" id="btn-settings" type="button" title="Einstellungen" aria-label="Einstellungen">&#9881;</button>
+    </div>
+  </header>
+
+  <main id="app" class="app">
+    <p class="loading">Tests werden geladen ...</p>
+  </main>
+
+  <dialog id="settings" class="dialog">
+    <form method="dialog" class="dialog-body" id="settings-form">
+      <h2>Einstellungen</h2>
+
+      <section>
+        <h3>KI-Feedback (Claude)</h3>
+        <p class="hint">Für das Feedback zu Schreiben und Sprechen ruft die App die Claude API direkt aus
+          dem Browser auf. Dafür brauchen Sie einen eigenen API-Schlüssel von console.anthropic.com.
+          Der Schlüssel wird nur in diesem Browser gespeichert und nur an api.anthropic.com gesendet.
+          Ohne Schlüssel funktionieren alle anderen Teile normal.</p>
+        <label class="field">API-Schlüssel
+          <input type="password" id="set-key" autocomplete="off" placeholder="sk-ant-...">
+        </label>
+        <label class="field">Sprache des Feedbacks
+          <select id="set-fblang">
+            <option value="de">Deutsch (einfach)</option>
+            <option value="en">English</option>
+            <option value="ru">Русский</option>
+            <option value="uk">Українська</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h3>Hören: Stimmen</h3>
+        <p class="hint">Die Hörtexte liest die Sprachausgabe Ihres Browsers vor. Die Qualität hängt vom Gerät ab.
+          Chrome und Edge haben meist gute deutsche Stimmen.</p>
+        <label class="field">Weibliche Stimme
+          <select id="set-voice-f"></select>
+        </label>
+        <label class="field">Männliche Stimme
+          <select id="set-voice-m"></select>
+        </label>
+        <label class="field">Sprechtempo <output id="set-rate-out"></output>
+          <input type="range" id="set-rate" min="0.7" max="1.2" step="0.05">
+        </label>
+        <button type="button" class="btn" id="set-voice-test">Stimmen testen</button>
+      </section>
+
+      <section>
+        <h3>Daten</h3>
+        <p class="hint">Antworten und Ergebnisse werden nur lokal in diesem Browser gespeichert.</p>
+        <button type="button" class="btn btn-danger" id="set-reset">Alle Antworten löschen</button>
+      </section>
+
+      <div class="dialog-actions">
+        <button type="submit" class="btn btn-primary" id="set-save">Speichern</button>
+        <button type="button" class="btn" id="set-cancel">Schließen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="vendor/anthropic-sdk.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/feedback.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
