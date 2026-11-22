@@ -9,7 +9,7 @@ A published model test was used only as a reference for the exam format.
 
 ## Start
 
-Online: https://b2-beruf-training.pages.dev (Cloudflare Pages) and https://greyels.github.io/dtb-b2-beruf/ (GitHub Pages).
+Online: https://b2-beruf-training.pages.dev (Cloudflare Pages, deployed on every push to main).
 
 Local: open `app/index.html` in Chrome or Edge (double-click is enough, no server needed).
 
