@@ -247,18 +247,6 @@ details { margin: 10px 0; }
 details > summary { cursor: pointer; font-weight: 600; color: var(--accent); }
 .model { white-space: pre-wrap; background: var(--surface-2); padding: 12px 14px; border-radius: 8px; margin-top: 8px; font-family: var(--serif); }
 
-.feedback { border: 1px solid var(--accent); border-radius: var(--radius); padding: 14px 16px; margin-top: 14px; background: var(--surface); }
-.feedback .crit { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
-.feedback .crit:last-of-type { border-bottom: 0; }
-.feedback .crit .pts { font-weight: 700; font-variant-numeric: tabular-nums; }
-.feedback .crit .cmt { grid-column: 1 / -1; color: var(--muted); font-size: .93rem; }
-.feedback table { width: 100%; border-collapse: collapse; font-size: .93rem; margin-top: 6px; }
-.feedback td, .feedback th { text-align: left; vertical-align: top; padding: 6px; border-bottom: 1px solid var(--line); }
-.feedback .orig { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 1px; }
-.feedback .corr { color: var(--ok); font-weight: 600; }
-.feedback .total { font-size: 1.2rem; font-weight: 700; }
-.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; vertical-align: -3px; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- phone note ---------- */
 .phonenote { display: grid; gap: 10px; }

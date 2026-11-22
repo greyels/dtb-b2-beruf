@@ -24,24 +24,6 @@
     <form method="dialog" class="dialog-body" id="settings-form">
       <h2>Einstellungen</h2>
 
-      <section>
-        <h3>KI-Feedback (Claude)</h3>
-        <p class="hint">Für das Feedback zu Schreiben und Sprechen ruft die App die Claude API direkt aus
-          dem Browser auf. Dafür brauchen Sie einen eigenen API-Schlüssel von console.anthropic.com.
-          Der Schlüssel wird nur in diesem Browser gespeichert und nur an api.anthropic.com gesendet.
-          Ohne Schlüssel funktionieren alle anderen Teile normal.</p>
-        <label class="field">API-Schlüssel
-          <input type="password" id="set-key" autocomplete="off" placeholder="sk-ant-...">
-        </label>
-        <label class="field">Sprache des Feedbacks
-          <select id="set-fblang">
-            <option value="de">Deutsch (einfach)</option>
-            <option value="en">English</option>
-            <option value="ru">Русский</option>
-            <option value="uk">Українська</option>
-          </select>
-        </label>
-      </section>
 
       <section>
         <h3>Hören: Stimmen</h3>
@@ -72,9 +54,7 @@
     </form>
   </dialog>
 
-  <script src="vendor/anthropic-sdk.js"></script>
   <script src="js/speech.js"></script>
-  <script src="js/feedback.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

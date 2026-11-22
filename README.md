@@ -27,15 +27,11 @@ locks the answers and shows scores, explanations, transcripts and model answers.
 - **Prüfung**: time limit per block (Lesen 45 min, Lesen und Schreiben 20, Hören und Schreiben 5,
   Sprachbausteine und Schreiben 35), each audio plays once.
 
-## AI feedback (optional)
+## Schreiben and Sprechen
 
-Schreiben (21, 58) and Sprechen (Teil 1-3) can be rated by Claude (model `claude-opus-5-5`).
-Each user enters an own Anthropic API key in the settings (gear icon). The key stays in this
-browser and is sent only to `api.anthropic.com`. The app calls the API directly from the
-browser with the official SDK (`app/vendor/anthropic-sdk.js`, built from `@anthropic-ai/sdk`).
-Without a key, model answers and checklists still work.
-
-Cost: one feedback request is roughly 2-4k input and 2-4k output tokens.
+These parts are not scored automatically. The learner compares the own text with the
+checklist and the model answer, which are shown at the end of the test. In Sprechen the
+learner can record the answer and listen to it again.
 
 ## Folder layout
 
@@ -44,16 +40,14 @@ app/
   index.html, styles.css
   js/app.js        routing, rendering, scoring
   js/speech.js     browser text-to-speech for Hören
-  js/feedback.js   Claude API feedback for Schreiben/Sprechen
   tests/testNN.js  one Modelltest per file (window.DTB_TESTS.push({...}))
-  vendor/anthropic-sdk.js
 tools/
   TEST_FORMAT.md   data format of a test
   validate.mjs     checks a test file (counts, numbering, answer keys, lengths)
   smoke.mjs        renders every part of every test in jsdom and reports JS errors
   shuffle-keys.mjs reorders a/b/c options and matching labels so answer keys differ between
                    tests (already applied; only run it again on a newly added test)
-  package.json     pinned dev tools (SDK bundle, esbuild, jsdom)
+  package.json     pinned dev tools (jsdom, wrangler)
 ```
 
 ## Tools
@@ -62,7 +56,6 @@ tools/
 cd tools && npm install          # once
 node validate.mjs                # check all tests
 node smoke.mjs                   # render test of the whole app
-npm run build:sdk                # rebuild app/vendor/anthropic-sdk.js
 ```
 
 ## Deploy to Cloudflare Pages

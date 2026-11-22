@@ -54,13 +54,12 @@
   // ------------------------------------------------------------------ storage
 
   const STORE_KEY = "dtb-b2-beruf.v1";
-  const API_KEY = "dtb-b2-beruf.apiKey";
 
   function loadStore() {
     try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
   }
   let store = loadStore();
-  store.settings = Object.assign({ mode: "practice", fbLang: "de", voiceF: "", voiceM: "", rate: 0.95 }, store.settings || {});
+  store.settings = Object.assign({ mode: "practice", voiceF: "", voiceM: "", rate: 0.95 }, store.settings || {});
   store.tests = store.tests || {};
 
   let saveTimer = null;
@@ -69,12 +68,11 @@
     const write = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* storage full or blocked */ } };
     if (now) write(); else saveTimer = setTimeout(write, 250);
   }
-  function getApiKey() { try { return localStorage.getItem(API_KEY) || ""; } catch { return ""; } }
-  function setApiKey(k) { try { if (k) localStorage.setItem(API_KEY, k); else localStorage.removeItem(API_KEY); } catch { /* ignore */ } }
+  try { localStorage.removeItem("dtb-b2-beruf.apiKey"); } catch { /* storage blocked */ }
 
   function testState(id) {
     const s = store.tests[id] = store.tests[id] || {};
-    for (const k of ["answers", "checked", "submitted", "writing", "notes", "feedback", "played", "timers", "speaking"]) s[k] = s[k] || {};
+    for (const k of ["answers", "writing", "notes", "played", "timers", "speaking"]) s[k] = s[k] || {};
     return s;
   }
 
@@ -312,65 +310,7 @@
     return box;
   }
 
-  // ------------------------------------------------------------------ writing + AI feedback
-
-  function feedbackView(fb) {
-    if (!fb) return null;
-    const total = (fb.criteria || []).reduce((n, c) => n + (Number(c.points) || 0), 0);
-    const max = (fb.criteria || []).reduce((n, c) => n + (Number(c.max) || 0), 0);
-    const box = el("div", { class: "feedback" },
-      el("div", { class: "total" }, `KI-Bewertung: ${total} / ${max} Punkte`),
-      el("p", null, fb.summary || ""));
-    (fb.criteria || []).forEach((c) => box.append(el("div", { class: "crit" },
-      el("span", null, c.name), el("span", { class: "pts" }, `${c.points}/${c.max}`), el("span", { class: "cmt" }, c.comment))));
-    if (fb.corrections && fb.corrections.length) {
-      box.append(el("h4", { style: "margin-top:12px" }, "Korrekturen"),
-        el("table", null, el("tbody", null, fb.corrections.map((c) => el("tr", null,
-          el("td", null, el("span", { class: "orig" }, c.original)),
-          el("td", null, el("span", { class: "corr" }, c.corrected)),
-          el("td", null, c.explanation))))));
-    }
-    const list = (title, arr) => arr && arr.length ? [el("h4", { style: "margin-top:12px" }, title), el("ul", null, arr.map((s) => el("li", null, s)))] : null;
-    box.append(...[list("Stärken", fb.strengths), list("Tipps", fb.improvements)].flat().filter(Boolean));
-    if (fb.improved_version) box.append(el("details", null, el("summary", null, "Verbesserte Fassung"), el("div", { class: "model" }, fb.improved_version)));
-    box.append(el("p", { class: "note", style: "margin:10px 0 0" }, "Automatische Bewertung zur Orientierung, keine offizielle Prüfungsbewertung."));
-    return box;
-  }
-
-  function feedbackButton(ctx, key, kind, getTask, getText) {
-    const holder = el("div");
-    const out = el("div");
-    const msg = el("div", { class: "note" });
-    const btn = el("button", { class: "btn btn-primary", type: "button" }, "KI-Feedback anfordern");
-    const render = () => { out.replaceChildren(); const v = feedbackView(ctx.st.feedback[key]); if (v) out.append(v); };
-    btn.addEventListener("click", async () => {
-      const apiKey = getApiKey();
-      if (!apiKey) {
-        msg.replaceChildren("Für KI-Feedback brauchen Sie einen API-Schlüssel. ",
-          el("a", { href: "#", on: { click: (e) => { e.preventDefault(); openSettings(); } } }, "Einstellungen öffnen"));
-        return;
-      }
-      const text = getText();
-      if (words(text) < 20) { msg.textContent = "Bitte zuerst mindestens 20 Wörter schreiben oder sprechen."; return; }
-      btn.disabled = true;
-      msg.replaceChildren(el("span", { class: "spinner" }), " Claude bewertet Ihren Text ... (ca. 20-60 Sekunden)");
-      try {
-        const fb = await Feedback.evaluate({ kind, apiKey, lang: store.settings.fbLang, task: getTask(), text });
-        ctx.st.feedback[key] = fb;
-        save(true);
-        msg.textContent = "";
-        render();
-        updateNav(ctx.t);
-      } catch (e) {
-        msg.replaceChildren(el("span", { class: "scoreline bad" }, e.message));
-      } finally {
-        btn.disabled = false;
-      }
-    });
-    render();
-    holder.append(el("div", { class: "actions" }, btn, msg), out);
-    return holder;
-  }
+  // ------------------------------------------------------------------ writing
 
   function writingArea(ctx, key, placeholder) {
     const count = el("span", { class: "wordcount" });
@@ -465,12 +405,12 @@
       el("div", { class: "rec" }, btn, state),
       el("p", { class: "note", style: "margin:8px 0 0" }, SpeechRec
         ? "Live-Transkription: Chrome/Edge schickt das Audio dafür an den Spracherkennungsdienst des Browsers. Sie können den Text danach korrigieren oder ganz tippen."
-        : "Live-Transkription gibt es in diesem Browser nicht (nur Chrome/Edge). Tippen Sie Ihre Antwort, um KI-Feedback zu bekommen."),
+        : "Live-Transkription gibt es in diesem Browser nicht (nur Chrome/Edge). Sie können Ihre Antwort auch tippen."),
       audioOut);
     return box;
   }
 
-  function speakingAnswer(ctx, key, kind, getTask) {
+  function speakingAnswer(ctx, key) {
     const ta = el("textarea", { class: "write", style: "min-height:160px", placeholder: "Transkription Ihrer Antwort (automatisch beim Aufnehmen oder selbst tippen)", lang: "de" });
     ta.value = ctx.st.speaking[key] || "";
     const count = el("span", { class: "wordcount" });
@@ -480,8 +420,7 @@
     return el("div", null,
       el("h3", { style: "margin-top:18px" }, "Ihre Antwort"),
       recorder(ctx, key, ta),
-      ta, count,
-      feedbackButton(ctx, key, kind, getTask, () => ta.value));
+      ta, count);
   }
 
   function phrases(list) {
@@ -538,11 +477,6 @@
       const p = ctx.t.lesenSchreiben;
       const w = p.writing;
       const area = writingArea(ctx, "21", "Betreff: ...\n\nSehr geehrte/r ...");
-      const taskText = () => [
-        w.task, "", "Punkte der Teamleitung:", ...w.points.map((x) => `- ${x}`), "",
-        `Weitergeleitete Nachricht (${p.forward.from}): ${p.forward.body}`, "",
-        `Ursprüngliche E-Mail von ${p.original.from}, Betreff "${p.original.subject}":`, p.original.body,
-      ].join("\n");
       return [
         el("div", { class: "instruction" }, paras(p.situation)),
         el("div", { class: "split" },
@@ -555,8 +489,7 @@
           area.node,
           el("details", null, el("summary", null, "Checkliste"), el("ul", { class: "checklist" }, w.checklist.map((x) => el("li", null, x)))),
           ctx.revealed ? el("details", null, el("summary", null, "Musterlösung"), el("div", { class: "model" }, w.modelAnswer))
-            : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests."),
-          feedbackButton(ctx, "21", "writing", taskText, () => area.ta.value)),
+            : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests.")),
       ];
     },
     hoeren1(ctx) {
@@ -678,10 +611,6 @@
       const themeRow = el("div", { class: "topic-list" }, p.themes.map((th) => el("label", { class: th.key === theme ? "sel" : "" },
         el("input", { type: "radio", name: `${ctx.t.id}-theme`, checked: th.key === theme, on: { change: () => { st.writing["58theme"] = th.key; save(); renderRoute(); } } }),
         el("div", null, el("strong", null, `Thema ${th.key}: ${th.title}`), el("p", { style: "margin:4px 0 0" }, th.text)))));
-      const taskText = () => {
-        const th = p.themes.find((x) => x.key === (st.writing["58theme"] || "A"));
-        return `${p.situation}\n\nGewähltes Thema ${th.key}: „${th.title}“\n${th.text}\n\nTextsorte: Forumsbeitrag im Firmenforum, ca. 150 Wörter.`;
-      };
       return [
         el("div", { class: "instruction" }, paras(p.situation)),
         el("div", { class: "panel" },
@@ -690,8 +619,7 @@
           el("div", { style: "margin-top:14px" }, area.node),
           el("details", null, el("summary", null, "Checkliste"), el("ul", { class: "checklist" }, p.checklist.map((x) => el("li", null, x)))),
           ctx.revealed ? el("details", null, el("summary", null, `Musterlösung Thema ${theme}`), el("div", { class: "model" }, p.modelAnswers[theme]))
-            : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests."),
-          feedbackButton(ctx, "58", "writing", taskText, () => area.ta.value)),
+            : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests.")),
       ];
     },
     sp1(ctx) {
@@ -714,8 +642,7 @@
           phrases(p.usefulPhrases)),
         el("div", { class: "panel" }, el("h3", null, "Teil 1B: Prüferfragen"), el("div", { class: "actions" }, qBtn),
           el("details", null, el("summary", null, "Alle Fragen anzeigen"), qList)),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp1", "speaking",
-          () => `Sprechen Teil 1A (Monolog, ca. 2 Minuten). Thema: ${topic.title} ${topic.hints}\nDanach Teil 1B Prüferfragen, z. B.: ${p.examinerQuestions.join(" / ")}`)),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp1")),
       ];
     },
     sp2(ctx) {
@@ -729,8 +656,7 @@
             el("button", { class: "btn btn-small", type: "button", on: { click: () => Speech.say(q, i % 2 ? "m" : "f") } }, "▶ Frage anhören"),
             countdown("90 Sekunden", 90)))),
         phrases(p.usefulPhrases)),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp2", "speaking",
-          () => `Sprechen Teil 2: informelles Gespräch mit Kolleg*innen (Du-Form, ca. 1,5 Minuten pro Frage). Fragen: ${p.prompts.join(" / ")}`)),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp2")),
       ];
     },
     sp3(ctx) {
@@ -747,8 +673,7 @@
         el("div", { class: "panel" }, el("h3", null, "Beispieldialog"),
           el("p", { class: "note" }, "Zuerst selbst versuchen, dann den Beispieldialog anhören."),
           audioPlayer({ ...ctx, exam: false }, p.modelDialogue, "sp3-model", { allowTranscript: true, transcriptOpen: false })),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp3", "speaking",
-          () => `Sprechen Teil 3: Lösungswege diskutieren (Dialog, ca. 4 Minuten). Situation: ${p.situation}\nAufgabe: ${p.task}\nStichpunkte: ${p.points.join("; ")}\nHinweis: Die lernende Person übt eventuell allein und spricht beide Rollen oder nur ihre eigenen Beiträge.`)),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp3")),
       ];
     },
   };
@@ -768,12 +693,6 @@
       answered += ["name", "telefon", "info1", "todo"].filter((k) => (st.notes[k] || "").trim()).length;
     }
     return { right, total, answered };
-  }
-
-  function aiScore(st, key) {
-    const fb = st.feedback[key];
-    if (!fb || !fb.criteria) return null;
-    return { points: fb.criteria.reduce((n, c) => n + (Number(c.points) || 0), 0), max: fb.criteria.reduce((n, c) => n + (Number(c.max) || 0), 0) };
   }
 
   function revealedFor(t, pid) {
@@ -812,8 +731,8 @@
 
   function navBadge(t, pid) {
     const st = testState(t.id);
-    if (pid.startsWith("sp")) { const a = aiScore(st, pid); return a ? [`${a.points}/${a.max}`, true] : ["", false]; }
-    if (pid === "schreiben") { const a = aiScore(st, "58"); return a ? [`${a.points}/${a.max}`, true] : [(st.writing["58"] || "").trim() ? "✎" : "", false]; }
+    if (pid.startsWith("sp")) return [(st.speaking[pid] || "").trim() ? "✎" : "", false];
+    if (pid === "schreiben") return [(st.writing["58"] || "").trim() ? "✎" : "", false];
     const s = partScore(t, pid);
     if (revealedFor(t, pid)) return [`${s.right}/${s.total}`, true];
     return [`${s.answered}/${s.total}`, false];
@@ -946,8 +865,6 @@
     rows.push(el("tr", { class: "total" }, el("td", null, "Geschlossene Aufgaben gesamt"),
       el("td", { class: "num" }, sumTotal ? `${sumRight} / ${sumTotal}` : "–"),
       el("td", { class: "num" }, sumTotal ? `${Math.round((sumRight / sumTotal) * 100)} %` : ""), el("td")));
-    const ai = [["21", "Schreiben 21 (E-Mail)"], ["58", "Schreiben 58 (Forumsbeitrag)"], ["sp1", "Sprechen Teil 1"], ["sp2", "Sprechen Teil 2"], ["sp3", "Sprechen Teil 3"]]
-      .map(([k, label]) => { const a = aiScore(st, k); return el("tr", null, el("td", null, label), el("td", { class: "num" }, a ? `${a.points} / ${a.max}` : "–"), el("td", { class: "num" }, a ? `${Math.round((a.points / a.max) * 100)} %` : ""), el("td", { class: "note" }, a ? "KI-Bewertung" : "noch kein Feedback")); });
 
     layout(
       el("h1", null, `Ergebnis: ${t.title}`),
@@ -955,8 +872,7 @@
       el("p", { class: "note" }, "Orientierung für das Training. Die offizielle DTB-Bewertung gewichtet die Teile anders. Als grobe Regel gilt: ab ca. 60 % in jedem Teil sind Sie auf gutem Weg zu B2."),
       el("h3", null, "Geschlossene Aufgaben (automatisch geprüft)"),
       el("table", { class: "results" }, el("thead", null, el("tr", null, el("th", null, "Teil"), el("th", null, "Punkte"), el("th", null, "%"), el("th", null, ""))), el("tbody", null, rows)),
-      el("h3", { style: "margin-top:22px" }, "Schreiben und Sprechen (KI-Feedback)"),
-      el("table", { class: "results" }, el("tbody", null, ai)),
+      el("p", { class: "note", style: "margin-top:14px" }, "Schreiben und Sprechen werden nicht automatisch bewertet. Vergleichen Sie Ihre Texte mit den Musterlösungen und Checklisten."),
       el("div", { class: "actions", style: "margin-top:22px" },
         el("button", { class: "btn btn-danger", type: "button", on: { click: () => { if (confirm(`Alle Antworten von ${t.title} löschen?`)) { delete store.tests[t.id]; save(true); renderRoute(); } } } }, "Test neu starten (alle Antworten löschen)")));
   }
@@ -1028,8 +944,6 @@
 
   function openSettings() {
     const dlg = $("#settings");
-    $("#set-key").value = getApiKey();
-    $("#set-fblang").value = store.settings.fbLang;
     fillVoiceSelect($("#set-voice-f"), store.settings.voiceF, "f");
     fillVoiceSelect($("#set-voice-m"), store.settings.voiceM, "m");
     $("#set-rate").value = store.settings.rate;
@@ -1054,8 +968,6 @@
       renderRoute();
     });
     $("#settings-form").addEventListener("submit", () => {
-      setApiKey($("#set-key").value.trim());
-      store.settings.fbLang = $("#set-fblang").value;
       store.settings.voiceF = $("#set-voice-f").value;
       store.settings.voiceM = $("#set-voice-m").value;
       store.settings.rate = Number($("#set-rate").value);
