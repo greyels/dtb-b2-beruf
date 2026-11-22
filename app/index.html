@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DTB B2 Beruf Training</title>
   <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      var th = (JSON.parse(localStorage.getItem("dtb-b2-beruf.v1")) || {}).settings;
+      th = th && th.theme;
+      if (th === "light" || th === "dark") document.documentElement.dataset.theme = th;
+    } catch (e) { /* storage blocked */ }
+  </script>
 </head>
 <body>
   <header class="topbar">
@@ -12,6 +19,7 @@
     <div class="topbar-mid" id="topbar-mid"></div>
     <div class="topbar-right">
       <span class="timer" id="timer" hidden></span>
+      <button class="icon-btn" id="btn-theme" type="button" title="Hell / Dunkel" aria-label="Hell oder dunkel umschalten">&#9790;</button>
       <button class="icon-btn" id="btn-settings" type="button" title="Einstellungen" aria-label="Einstellungen">&#9881;</button>
     </div>
   </header>
@@ -23,6 +31,17 @@
   <dialog id="settings" class="dialog">
     <form method="dialog" class="dialog-body" id="settings-form">
       <h2>Einstellungen</h2>
+
+      <section>
+        <h3>Darstellung</h3>
+        <label class="field">Farbschema
+          <select id="set-theme">
+            <option value="auto">Automatisch (wie das System)</option>
+            <option value="light">Hell</option>
+            <option value="dark">Dunkel</option>
+          </select>
+        </label>
+      </section>
 
 
       <section>

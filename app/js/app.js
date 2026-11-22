@@ -59,7 +59,7 @@
     try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
   }
   let store = loadStore();
-  store.settings = Object.assign({ mode: "practice", voiceF: "", voiceM: "", rate: 0.95 }, store.settings || {});
+  store.settings = Object.assign({ mode: "practice", theme: "auto", voiceF: "", voiceM: "", rate: 0.95 }, store.settings || {});
   store.tests = store.tests || {};
 
   let saveTimer = null;
@@ -1047,8 +1047,23 @@
     sel.dataset.g = g;
   }
 
+  const darkQuery = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  const isDark = () => store.settings.theme === "dark" || (store.settings.theme !== "light" && !!(darkQuery && darkQuery.matches));
+
+  function applyTheme() {
+    const th = store.settings.theme;
+    if (th === "light" || th === "dark") document.documentElement.dataset.theme = th;
+    else delete document.documentElement.dataset.theme;
+    const btn = $("#btn-theme");
+    if (btn) {
+      btn.textContent = isDark() ? "\u2600" : "\u263E";
+      btn.title = isDark() ? "Helles Farbschema" : "Dunkles Farbschema";
+    }
+  }
+
   function openSettings() {
     const dlg = $("#settings");
+    $("#set-theme").value = store.settings.theme;
     fillVoiceSelect($("#set-voice-f"), store.settings.voiceF, "f");
     fillVoiceSelect($("#set-voice-m"), store.settings.voiceM, "m");
     $("#set-rate").value = store.settings.rate;
@@ -1058,6 +1073,13 @@
 
   function initSettings() {
     $("#btn-settings").addEventListener("click", openSettings);
+    $("#btn-theme").addEventListener("click", () => {
+      store.settings.theme = isDark() ? "light" : "dark";
+      save(true);
+      applyTheme();
+    });
+    if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener("change", applyTheme);
+    applyTheme();
     $("#set-cancel").addEventListener("click", () => $("#settings").close());
     $("#set-rate").addEventListener("input", (e) => { $("#set-rate-out").textContent = Number(e.target.value).toFixed(2); });
     $("#set-voice-test").addEventListener("click", () => {
@@ -1073,6 +1095,8 @@
       renderRoute();
     });
     $("#settings-form").addEventListener("submit", () => {
+      store.settings.theme = $("#set-theme").value;
+      applyTheme();
       store.settings.voiceF = $("#set-voice-f").value;
       store.settings.voiceM = $("#set-voice-m").value;
       store.settings.rate = Number($("#set-rate").value);
