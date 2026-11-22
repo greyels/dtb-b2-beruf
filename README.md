@@ -9,7 +9,7 @@ A published model test was used only as a reference for the exam format.
 
 ## Start
 
-Online: https://greyels.github.io/dtb-b2-beruf/ (GitHub Pages).
+Online: https://b2-beruf-training.pages.dev (Cloudflare Pages) and https://greyels.github.io/dtb-b2-beruf/ (GitHub Pages).
 
 Local: open `app/index.html` in Chrome or Edge (double-click is enough, no server needed).
 
@@ -63,6 +63,19 @@ cd tools && npm install          # once
 node validate.mjs                # check all tests
 node smoke.mjs                   # render test of the whole app
 npm run build:sdk                # rebuild app/vendor/anthropic-sdk.js
+```
+
+## Deploy to Cloudflare Pages
+
+Uploads only the `app/` folder to the project `b2-beruf-training`
+(https://b2-beruf-training.pages.dev).
+
+```bash
+cd tools
+npm install            # once
+npm run cf:login       # once: log in to Cloudflare in the browser
+npm run cf:create      # once: create the Pages project
+npm run cf:deploy      # every update: validate tests, then upload app/
 ```
 
 ## Add a test
