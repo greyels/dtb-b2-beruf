@@ -1054,11 +1054,8 @@
     const th = store.settings.theme;
     if (th === "light" || th === "dark") document.documentElement.dataset.theme = th;
     else delete document.documentElement.dataset.theme;
-    const btn = $("#btn-theme");
-    if (btn) {
-      btn.textContent = isDark() ? "\u2600" : "\u263E";
-      btn.title = isDark() ? "Helles Farbschema" : "Dunkles Farbschema";
-    }
+    const toggle = $("#theme-toggle");
+    if (toggle) toggle.checked = isDark();
   }
 
   function openSettings() {
@@ -1073,8 +1070,8 @@
 
   function initSettings() {
     $("#btn-settings").addEventListener("click", openSettings);
-    $("#btn-theme").addEventListener("click", () => {
-      store.settings.theme = isDark() ? "light" : "dark";
+    $("#theme-toggle").addEventListener("change", (e) => {
+      store.settings.theme = e.target.checked ? "dark" : "light";
       save(true);
       applyTheme();
     });

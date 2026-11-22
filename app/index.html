@@ -19,7 +19,12 @@
     <div class="topbar-mid" id="topbar-mid"></div>
     <div class="topbar-right">
       <span class="timer" id="timer" hidden></span>
-      <button class="icon-btn" id="btn-theme" type="button" title="Hell / Dunkel" aria-label="Hell oder dunkel umschalten">&#9790;</button>
+      <label class="theme-switch" title="Dunkles Farbschema">
+        <span class="ts-icon" aria-hidden="true">&#9728;</span>
+        <input type="checkbox" id="theme-toggle" role="switch" aria-label="Dunkles Farbschema">
+        <span class="ts-track" aria-hidden="true"><span class="ts-thumb"></span></span>
+        <span class="ts-icon" aria-hidden="true">&#9790;</span>
+      </label>
       <button class="icon-btn" id="btn-settings" type="button" title="Einstellungen" aria-label="Einstellungen">&#9881;</button>
     </div>
   </header>
