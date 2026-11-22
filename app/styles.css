@@ -136,10 +136,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .instruction p:last-child { margin: 0; }
 
 .split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-.split > .sticky { position: sticky; top: 68px; max-height: calc(100vh - 84px); overflow: auto; }
 @media (max-width: 1000px) {
   .split { grid-template-columns: 1fr; }
-  .split > .sticky { position: static; max-height: none; }
 }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); margin-bottom: 16px; }
