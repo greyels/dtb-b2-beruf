@@ -20,12 +20,14 @@ Local: open `app/index.html` in Chrome or Edge (double-click is enough, no serve
 
 ## Modes
 
-In both modes the solutions are shown only at the end: after the last part, "Test beenden"
-locks the answers and shows scores, explanations, transcripts and model answers.
-
-- **Übung**: no time limit, audio can be paused and replayed.
+- **Übung**: no time limit, audio can be paused and replayed. Each part has
+  "Antworten prüfen" (shows solutions, explanations and the transcript for that part) and
+  "Nochmal versuchen".
 - **Prüfung**: time limit per block (Lesen 45 min, Lesen und Schreiben 20, Hören und Schreiben 5,
-  Sprachbausteine und Schreiben 35), each audio plays once.
+  Sprachbausteine und Schreiben 35), each audio plays once, solutions only at the end.
+
+In both modes, "Test beenden" after the last part locks all answers and shows scores,
+explanations, transcripts and model answers for the whole test.
 
 ## Schreiben and Sprechen
 

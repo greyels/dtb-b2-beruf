@@ -72,7 +72,7 @@
 
   function testState(id) {
     const s = store.tests[id] = store.tests[id] || {};
-    for (const k of ["answers", "writing", "notes", "played", "timers", "speaking"]) s[k] = s[k] || {};
+    for (const k of ["answers", "checked", "writing", "notes", "played", "timers", "speaking"]) s[k] = s[k] || {};
     return s;
   }
 
@@ -140,7 +140,7 @@
   function ctxFor(t, pid) {
     const st = testState(t.id);
     const block = BLOCK_OF[pid];
-    const revealed = !!st.finished;
+    const revealed = !!st.finished || (mode() === "practice" && !!st.checked[pid]);
     return { t, st, pid, block, revealed, locked: revealed, exam: mode() === "exam" };
   }
 
@@ -697,8 +697,7 @@
 
   function revealedFor(t, pid) {
     const st = testState(t.id);
-    const b = BLOCK_OF[pid];
-    return !!st.finished;
+    return !!st.finished || (mode() === "practice" && !!st.checked[pid]);
   }
 
   function testSummary(t) {
@@ -771,20 +770,40 @@
   }
 
   function partFooter(ctx) {
-    const { t, pid } = ctx;
+    const { t, st, pid } = ctx;
     const idx = PART_ORDER.indexOf(pid);
     const prev = PART_ORDER[idx - 1];
     const next = PART_ORDER[idx + 1] || "ergebnis";
     const bar = el("div", { class: "actions" });
-    if (ctx.revealed && partItems(t, pid).length > 0) {
+    const closed = partItems(t, pid).length > 0;
+    const checkable = closed || pid === "schreiben";
+    if (!ctx.exam && !ctx.revealed && checkable) {
+      bar.append(el("button", {
+        class: "btn btn-primary", type: "button",
+        on: { click: () => { st.checked[pid] = true; save(true); renderRoute(); } },
+      }, closed ? "Antworten prüfen" : "Musterlösung zeigen"));
+    }
+    if (ctx.revealed && closed) {
       const s = partScore(t, pid);
       bar.append(el("span", { class: `scoreline ${s.right / s.total >= 0.6 ? "good" : "bad"}` }, `${s.right} von ${s.total} richtig`));
+    }
+    if (ctx.revealed && !st.finished && checkable) {
+      bar.append(el("button", { class: "btn", type: "button", on: { click: () => resetPart(t, pid) } }, "Nochmal versuchen"));
     }
     const navRow = el("div", { class: "actions", style: "justify-content:space-between" },
       prev ? el("a", { class: "btn", href: `#/t/${t.id}/${prev}` }, `← ${PART_TITLE[prev]}`) : el("span"),
       el("a", { class: next === "ergebnis" ? "btn btn-primary" : "btn", href: `#/t/${t.id}/${next}` },
-        next === "ergebnis" ? (ctx.revealed ? "Ergebnis →" : "Test beenden →") : `${PART_TITLE[next]} →`));
+        next === "ergebnis" ? (st.finished ? "Ergebnis →" : "Test beenden →") : `${PART_TITLE[next]} →`));
     return [bar, navRow];
+  }
+
+  function resetPart(t, pid) {
+    const st = testState(t.id);
+    partItems(t, pid).forEach((it) => delete st.answers[it.nr]);
+    if (pid === "hs") st.notes = {};
+    delete st.checked[pid];
+    save(true);
+    renderRoute();
   }
 
   function startBlockTimer(ctx) {
