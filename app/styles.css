@@ -115,7 +115,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .timer.low { background: var(--bad-soft); color: var(--bad); }
 
 /* ---------- layout ---------- */
-.app { max-width: 1240px; margin: 0 auto; padding: 20px 16px 80px; }
+.app { max-width: 1240px; margin: 0 auto; padding: 20px 16px 48px; }
+.site-footer { max-width: 1240px; margin: 0 auto; padding: 16px 16px 32px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+.site-footer p { margin: 0 0 4px; }
 .loading { color: var(--muted); }
 
 .test-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 24px; align-items: start; }
