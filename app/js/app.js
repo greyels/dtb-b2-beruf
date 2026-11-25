@@ -342,6 +342,105 @@
 
   // ------------------------------------------------------------------ writing
 
+  // ------------------------------------------------------------------ ChatGPT hand-off
+
+  /** No API: the app opens chatgpt.com with a prepared prompt and also copies the prompt. */
+  const CHATGPT_URL = "https://chatgpt.com/";
+  const MAX_URL_LENGTH = 7500;
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* use the fallback below */ }
+    try {
+      const ta = el("textarea", { style: "position:fixed;top:-1000px;opacity:0" });
+      ta.value = text;
+      document.body.append(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return ok;
+    } catch { return false; }
+  }
+
+  function writingPrompt(kind, task, text) {
+    return [
+      "Du bist Prüferin für den „Deutsch-Test für den Beruf B2“ (DTB B2). Bewerte den Text einer lernenden Person, die sich auf die Prüfung vorbereitet.",
+      "",
+      `AUFGABE (${kind}):`,
+      task,
+      "",
+      "TEXT DER LERNENDEN PERSON:",
+      '"""',
+      text.trim(),
+      '"""',
+      "",
+      "Bewerte nach den vier DTB-Kriterien. Gib für jedes Kriterium eine Stufe und einen kurzen Kommentar: A = B2 gut erfüllt, B = B2 erfüllt, C = B1 erfüllt, D = unter B1.",
+      "I. Kommunikative Aufgabenbewältigung: alle Inhaltspunkte bearbeitet? Passende Textsorte und passendes Register?",
+      "II. Kommunikative Gestaltung: Aufbau, Absätze, Verknüpfung der Sätze, Anrede und Gruß.",
+      "III. Formale Richtigkeit: Grammatik, Satzbau, Rechtschreibung.",
+      "IV. Spektrum sprachlicher Mittel: Wortschatz und Satzbau für B2 im Beruf.",
+      "",
+      "Danach:",
+      "1. Eine Tabelle mit den wichtigsten Fehlern (höchstens 10): Original | Korrektur | kurze Erklärung.",
+      "2. Zwei oder drei konkrete Tipps für die Prüfung.",
+      "3. Eine verbesserte Fassung meines Textes auf B2-Niveau. Behalte meine Ideen.",
+      "Antworte in einfachem Deutsch mit kurzen Sätzen.",
+    ].join("\n");
+  }
+
+  function speakingPrompt(task, text) {
+    return [
+      "Du bist Prüferin für den „Deutsch-Test für den Beruf B2“ (DTB B2), Prüfungsteil Sprechen. Unten steht die Transkription einer mündlichen Antwort (automatische Spracherkennung oder getippt).",
+      "",
+      "AUFGABE:",
+      task,
+      "",
+      "TRANSKRIPTION:",
+      '"""',
+      text.trim(),
+      '"""',
+      "",
+      "Bewerte mit Stufen (A = B2 gut erfüllt, B = B2 erfüllt, C = B1 erfüllt, D = unter B1) und je einem kurzen Kommentar:",
+      "I. Kommunikative Aufgabenbewältigung: Aufgabe vollständig bearbeitet, genug Inhalt, passende Redemittel?",
+      "III. Formale Richtigkeit: Grammatik und Satzbau.",
+      "IV. Spektrum sprachlicher Mittel: Wortschatz und Satzbau.",
+      "Aussprache (Kriterium II) kannst du aus dem Text nicht bewerten. Fehler der Spracherkennung zählst du nicht als Fehler, wenn das gemeinte Wort klar ist.",
+      "",
+      "Danach:",
+      "1. Die wichtigsten Fehler (höchstens 8): Original | Korrektur | kurze Erklärung.",
+      "2. Fünf nützliche Redemittel für diese Aufgabe.",
+      "3. Eine verbesserte Fassung meiner Antwort auf B2-Niveau.",
+      "Antworte in einfachem Deutsch mit kurzen Sätzen.",
+    ].join("\n");
+  }
+
+  function chatgptButton(ctx, getPrompt, getText) {
+    if (ctx.exam && !ctx.st.finished) return null;
+    const msg = el("div", { class: "note" });
+    const out = el("div");
+    const btn = el("button", { class: "btn", type: "button" }, "Mit ChatGPT prüfen ↗");
+    btn.addEventListener("click", async () => {
+      out.replaceChildren();
+      if (words(getText()) < 20) { msg.textContent = "Bitte zuerst mindestens 20 Wörter schreiben oder sprechen."; return; }
+      const prompt = getPrompt();
+      const url = `${CHATGPT_URL}?q=${encodeURIComponent(prompt)}`;
+      const tooLong = url.length > MAX_URL_LENGTH;
+      window.open(tooLong ? CHATGPT_URL : url, "_blank", "noopener");
+      const copied = await copyText(prompt);
+      if (tooLong) {
+        msg.textContent = copied
+          ? "Ihr Text ist zu lang für den Link. ChatGPT ist geöffnet, und der Prompt ist kopiert: Fügen Sie ihn dort mit Strg+V ein und senden Sie ihn."
+          : "Ihr Text ist zu lang für den Link. Kopieren Sie den Prompt unten und fügen Sie ihn in ChatGPT ein.";
+      } else {
+        msg.textContent = "ChatGPT ist in einem neuen Tab geöffnet." + (copied ? " Falls das Eingabefeld dort leer ist: Der Prompt ist kopiert, fügen Sie ihn mit Strg+V ein." : "");
+      }
+      out.append(el("details", { open: !copied }, el("summary", null, "Prompt ansehen"), el("div", { class: "model" }, prompt)));
+    });
+    return el("div", { class: "panel muted", style: "margin-top:12px" },
+      el("div", { class: "actions", style: "margin:0" }, btn),
+      el("p", { class: "note", style: "margin:6px 0 0" }, "Öffnet chatgpt.com mit Ihrer Aufgabe und Ihrem Text. Ein Konto ist nicht nötig. Ihr Text wird dabei an ChatGPT (OpenAI) gesendet."),
+      msg, out);
+  }
+
   function writingArea(ctx, key, placeholder) {
     const count = el("span", { class: "wordcount" });
     const ta = el("textarea", { class: "write", placeholder, spellcheck: "false", lang: "de" });
@@ -440,7 +539,7 @@
     return box;
   }
 
-  function speakingAnswer(ctx, key) {
+  function speakingAnswer(ctx, key, getTask) {
     const ta = el("textarea", { class: "write", style: "min-height:160px", placeholder: "Transkription Ihrer Antwort (automatisch beim Aufnehmen oder selbst tippen)", lang: "de" });
     ta.value = ctx.st.speaking[key] || "";
     const count = el("span", { class: "wordcount" });
@@ -450,7 +549,8 @@
     return el("div", null,
       el("h3", { style: "margin-top:18px" }, "Ihre Antwort"),
       recorder(ctx, key, ta),
-      ta, count);
+      ta, count,
+      getTask && chatgptButton(ctx, () => speakingPrompt(getTask(), ta.value), () => ta.value));
   }
 
   function phrases(list) {
@@ -517,6 +617,11 @@
           paras(w.task),
           el("ul", { class: "checklist" }, w.points.map((x) => el("li", null, x))),
           area.node,
+          chatgptButton(ctx, () => writingPrompt("formelle E-Mail an einen Kunden, ca. 150 Wörter", [
+            w.task, "", "Punkte der Teamleitung, die in der E-Mail vorkommen müssen:", ...w.points.map((x) => `- ${x}`), "",
+            `Weitergeleitete Nachricht der Teamleitung (${p.forward.from}): ${p.forward.body}`, "",
+            `Ursprüngliche E-Mail von ${p.original.from}, Betreff „${p.original.subject}“:`, p.original.body,
+          ].join("\n"), area.ta.value), () => area.ta.value),
           el("details", null, el("summary", null, "Checkliste"), el("ul", { class: "checklist" }, w.checklist.map((x) => el("li", null, x)))),
           ctx.revealed ? el("details", null, el("summary", null, "Musterlösung"), el("div", { class: "model" }, w.modelAnswer))
             : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests.")),
@@ -647,6 +752,11 @@
           el("h3", null, "58  Wählen Sie ein Thema"),
           themeRow,
           el("div", { style: "margin-top:14px" }, area.node),
+          chatgptButton(ctx, () => {
+            const th = p.themes.find((x) => x.key === (st.writing["58theme"] || "A"));
+            return writingPrompt("Forumsbeitrag im Firmenforum, ca. 150 Wörter",
+              `${p.situation}\n\nGewähltes Thema ${th.key}: „${th.title}“\n${th.text}`, area.ta.value);
+          }, () => area.ta.value),
           el("details", null, el("summary", null, "Checkliste"), el("ul", { class: "checklist" }, p.checklist.map((x) => el("li", null, x)))),
           ctx.revealed ? el("details", null, el("summary", null, `Musterlösung Thema ${theme}`), el("div", { class: "model" }, p.modelAnswers[theme]))
             : el("p", { class: "note" }, "Die Musterlösung sehen Sie am Ende des Tests.")),
@@ -672,7 +782,8 @@
           phrases(p.usefulPhrases)),
         el("div", { class: "panel" }, el("h3", null, "Teil 1B: Prüferfragen"), el("div", { class: "actions" }, qBtn),
           el("details", null, el("summary", null, "Alle Fragen anzeigen"), qList)),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp1")),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp1",
+          () => `Teil 1A: Monolog von ca. 2 Minuten zum Thema „${topic.title}“ ${topic.hints}. Danach Teil 1B: Antworten auf Prüferfragen, zum Beispiel: ${p.examinerQuestions.join(" / ")}`)),
       ];
     },
     sp2(ctx) {
@@ -686,7 +797,8 @@
             el("button", { class: "btn btn-small", type: "button", on: { click: () => Speech.say(q, i % 2 ? "m" : "f") } }, "▶ Frage anhören"),
             countdown("90 Sekunden", 90)))),
         phrases(p.usefulPhrases)),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp2")),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp2",
+          () => `Teil 2: informelles Gespräch mit Kolleginnen und Kollegen (Du-Form), ca. 1,5 Minuten pro Frage. Antworten, von sich erzählen, Gegenfragen stellen. Fragen: ${p.prompts.join(" / ")}`)),
       ];
     },
     sp3(ctx) {
@@ -703,7 +815,8 @@
         el("div", { class: "panel" }, el("h3", null, "Beispieldialog"),
           el("p", { class: "note" }, "Zuerst selbst versuchen, dann den Beispieldialog anhören."),
           audioPlayer({ ...ctx, exam: false }, p.modelDialogue, "sp3-model", { allowTranscript: true, transcriptOpen: false })),
-        el("div", { class: "panel" }, speakingAnswer(ctx, "sp3")),
+        el("div", { class: "panel" }, speakingAnswer(ctx, "sp3",
+          () => `Teil 3: Lösungswege diskutieren (Dialog, ca. 4 Minuten). Vorschläge machen, auf Vorschläge reagieren, sich einigen, wer was übernimmt. Situation: ${p.situation} Aufgabe: ${p.task} Stichpunkte: ${p.points.join("; ")}. Hinweis: Die lernende Person übt eventuell allein und spricht nur ihre eigenen Beiträge oder beide Rollen.`)),
       ];
     },
   };

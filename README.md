@@ -32,6 +32,10 @@ Browser notes:
 - **Sprechen**: record the answer, listen to it again, and see a live transcript
   (Chrome/Edge). Useful phrases and a model dialogue for Teil 3.
 - **Schreiben**: checklist and model answer for tasks 21 and 58.
+- **Feedback with ChatGPT** (no API key, no login): the button "Mit ChatGPT prüfen" under
+  Schreiben 21, 58 and the Sprechen transcripts opens chatgpt.com with a prepared prompt
+  (task, DTB criteria, the learner's text) and also copies the prompt to the clipboard.
+  In Prüfung mode the button appears only after "Test beenden". The text is sent to OpenAI.
 - **Points**: every part shows its official exam points. The results page shows points per
   skill and the pass rule.
 - **Light and dark theme**: switch in the top bar, or "Automatisch" in the settings to follow
